@@ -15,3 +15,5 @@ PRのタイトルまたは本文に `Closes TASK-<n>`（例: `Closes TASK-2`）�
 
 - `NOTION_TOKEN` — Notion内部インテグレーションのトークン
 - `NOTION_DATABASE_ID` — 対象DBのID
+
+- E2E test change for TASK-2
