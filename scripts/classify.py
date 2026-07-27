@@ -5,6 +5,7 @@
 採点しないという governance/verification.md の原則を、マージ可否にも適用する。
 
   classify.py <変更ファイル...>
+  classify.py --from-file <パス一覧のファイル>   # 1行1パス
 
 終了コード: 0 = 自動マージ可（A/B）、1 = 人間必須（C）、2 = 分割要求（D）
 未知のパスは C に倒す（fail closed）。
@@ -92,4 +93,9 @@ def main(paths):
 
 
 if __name__ == "__main__":
-    sys.exit(main([p for p in sys.argv[1:] if p.strip()]))
+    args = sys.argv[1:]
+    if args[:1] == ["--from-file"]:
+        # シェル配列を経由しないための入口。空白を含むパスでも壊れない。
+        with open(args[1], encoding="utf-8") as fh:
+            args = fh.read().splitlines()
+    sys.exit(main([p for p in args if p.strip()]))
