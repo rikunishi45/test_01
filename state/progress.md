@@ -33,9 +33,9 @@
 
 | ID | タスク | Status | 開始 | 完了 | PR | Notes |
 |---|---|---|---|---|---|---|
-| T-001 | エージェント/スキル移行とモデル割り当ての宣言化 | review | 2026-07-27 | - | #2 | `skills/*.md` を `.claude/agents/` と `.claude/skills/` へ移行。routing.md を Opus 5/Sonnet 5/Haiku 4.5 構成に整理 |
-| T-002 | 進捗台帳（このファイル）の新設とワークフローへの組み込み | review | 2026-07-27 | - | #2 | T-001 と同一ブランチ |
-| T-003 | Notion同期の削除と進捗台帳への一本化 | review | 2026-07-27 | - | #2 | `.github/workflows/notion-sync.yml` を削除。GitHub Secrets（`NOTION_TOKEN`／`NOTION_DATABASE_ID`）も削除済み |
+| T-001 | エージェント/スキル移行とモデル割り当ての宣言化 | done | 2026-07-27 | 2026-07-27 | #2 | `skills/*.md` を `.claude/agents/` と `.claude/skills/` へ移行。routing.md を Opus 5/Sonnet 5/Haiku 4.5 構成に整理 |
+| T-002 | 進捗台帳（このファイル）の新設とワークフローへの組み込み | done | 2026-07-27 | 2026-07-27 | #2 | T-001 と同一ブランチ |
+| T-003 | Notion同期の削除と進捗台帳への一本化 | done | 2026-07-27 | 2026-07-27 | #2 | `.github/workflows/notion-sync.yml` を削除。GitHub Secrets（`NOTION_TOKEN`／`NOTION_DATABASE_ID`）も削除済み |
 
 ---
 
@@ -48,8 +48,8 @@
 | planning | 0 |
 | in-progress | 0 |
 | blocked | 0 |
-| review | 3 |
-| done | 0 |
+| review | 0 |
+| done | 3 |
 | dropped | 0 |
 
 **最終更新：** 2026-07-27
