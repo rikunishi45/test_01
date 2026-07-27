@@ -89,7 +89,7 @@ Agent(
 )
 ```
 
-**`model` パラメータは指定しない。** `verifier` は sonnet、`doc-verifier` は haiku に固定されている。上書きが必要な例外時のみ指定し、理由を `state/current-task.md` に残す。
+**`model` パラメータは指定しない。** `verifier` は sonnet、`doc-verifier` は haiku に固定されている。上書きが必要な例外時のみ指定し、理由を `state/tasks/T-NNN.md` に残す。
 
 渡してはいけないもの：
 - Executorの自己評価や「意図としてはこうだった」という説明（判定を汚染する）

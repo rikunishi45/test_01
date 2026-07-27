@@ -1,6 +1,6 @@
 # TODO
 
-未着手の作業項目。着手する際は `current-task.md` へ昇格させる。
+未着手の作業項目。着手する際は `state/tasks/T-NNN.md` として起票する。
 
 ---
 

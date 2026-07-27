@@ -27,9 +27,9 @@ Planning（計画）→ Execution（実行）→ Review（レビュー）→ Ref
 3. 依存関係とクリティカルパスを特定する。
 4. 複雑度を見積もる：small（1〜3ステップ）、medium（4〜8）、large（9以上）。
 5. largeタスクには、ユーザーが進捗をレビューできる明示的なチェックポイントを設ける。
-6. **`state/progress.md` に行を1つ追加する**（`T-NNN` を採番し、Status を `planning` にする）。以降このIDでタスクを追跡する。
+6. **`state/tasks/T-NNN.md` を新規作成する**（連番を採り、frontmatter の `status` を `planning` にする）。以降このIDでタスクを追跡する。既存のタスクファイルは触らない。
 
-**成果物：** 計画を反映した `state/current-task.md` と、`state/progress.md` の新規行。
+**成果物：** 計画を反映した `state/tasks/T-NNN.md`。`state/progress.md` は生成物なので手で触らない。
 
 **終了ゲート：** 計画が書き出され、ユーザー承認（largeタスク）または自己承認（small/mediumタスク）を得ている。
 
@@ -43,7 +43,7 @@ Planning（計画）→ Execution（実行）→ Review（レビュー）→ Ref
 1. 依存関係を守りながら、ステップを順番に進める。
 2. 各ステップの開始前に、担当を確認する。サブエージェントに委任する場合、手順書は `.claude/agents/*.md` からシステムプロンプトとして自動で読み込まれる。
 3. 各ステップの完了後、受け入れ基準に対してセルフチェックする。
-4. 完了したステップを `state/current-task.md` に反映する。実行に入った時点で `state/progress.md` の Status を `in-progress` にする（ブロックされたら `blocked` にしてNotesにブロッカーを書く）。
+4. 完了したステップを `state/tasks/T-NNN.md` に反映する。実行に入った時点で同ファイルの `status` を `in-progress` にする（ブロックされたら `blocked` にし、本文にブロッカーを書く）。
 5. ブロッカーに遭遇したら先に進まず、表面化させる。
 
 **レビューゲート発動条件（実行を一時停止してレビューする）：**
@@ -85,10 +85,10 @@ Planning（計画）→ Execution（実行）→ Review（レビュー）→ Ref
 3. 同じタグの教訓が2回以上溜まっていたら、該当するエージェント定義またはスキルへの反映案を作成してユーザーに提示する（承認後に更新）。
 4. `model` パラメータでモデルを上書きした場合は、その判断が適切だったかを確認し、`governance/routing.md` の見直し材料にする。
 5. フォローアップ項目を `state/todo.md` に記録する。
-6. **`state/progress.md` の該当行を更新する** — Status を `done`、完了日、PR番号を記入し、末尾の集計表と最終更新日も直す。
-7. 完了した項目を `state/current-task.md` から整理する（履歴は `state/progress.md` に残るため消してよい）。
+6. **`state/tasks/T-NNN.md` の frontmatter を更新する** — `status` を `done`、`completed` に完了日、`pr` にPR番号を記入する。タスクファイルは削除しない（履歴として残す）。
+7. 分類定義を変えた場合は、`governance/change-classes.md`・`scripts/classify.py`・`.github/CODEOWNERS` の3者が一致しているか確認する。CIはこの一致を検査しない。
 
-**成果物：** 更新された `memory/` と `state/` ファイル。`state/progress.md` が最新であること — このファイルが外部から進捗を読む唯一の窓口。
+**成果物：** 更新された `memory/` と `state/tasks/` のファイル。`state/progress.md` は main へのマージ後に `.github/workflows/ledger.yml` が再生成するため、手で更新しない。
 
 ---
 
@@ -109,7 +109,7 @@ Planning（計画）→ Execution（実行）→ Review（レビュー）→ Ref
 
 ## チェックポイントプロトコル
 
-チェックポイント付きのタスクでは、`state/current-task.md` に以下の形式を使う：
+チェックポイント付きのタスクでは、`state/tasks/T-NNN.md` に以下の形式を使う：
 
 ```markdown
 ## Checkpoint N — [名前]
@@ -123,7 +123,7 @@ Planning（計画）→ Execution（実行）→ Review（レビュー）→ Ref
 チェックポイントに到達したら：
 
 1. `governance/verification.md` に従って検証する。
-2. PASS → `state/current-task.md` の該当チェックポイントを `done`（検証スコア付き）に更新する。サインオフフェーズの終端であればユーザーのサインオフを待ち、自走フェーズであればユーザーの指示を待たずに次へ自動的に進む（後述「フェーズゲートと一括事前承認」参照）。進捗は応答内で簡潔に報告する。
+2. PASS → `state/tasks/T-NNN.md` の該当チェックポイントを `done`（検証スコア付き）に更新する。サインオフフェーズの終端であればユーザーのサインオフを待ち、自走フェーズであればユーザーの指示を待たずに次へ自動的に進む（後述「フェーズゲートと一括事前承認」参照）。進捗は応答内で簡潔に報告する。
 3. FAIL（リトライ2回後）またはエスカレーション条件該当 → 停止してユーザーに報告する。
 
 ユーザーの明示的な承認ポイントは、(1) 計画承認（largeタスク）、(2) サインオフフェーズ末の各ゲート、(3) 最終ゲート、の3種のみ。自走フェーズ中のチェックポイントでは停止しない。
@@ -149,7 +149,7 @@ Planning（計画）→ Execution（実行）→ Review（レビュー）→ Ref
 
 1. 残りの工程で承認が必要になると想定される項目（不可逆操作、外部依存の導入、スコープ境界など）を列挙して提示する。
 2. 「一括承認して自律実行を開始しますか？」とユーザーに確認する。
-3. 承認された項目を `state/current-task.md` に **承認済みスコープ** として記録する。
+3. 承認された項目を `state/tasks/T-NNN.md` に **承認済みスコープ** として記録する。
 4. 以降は承認済みスコープの範囲内で自律実行する。チェックポイントは検証PASSで自動続行し、進捗は応答内で報告する。
 
 ### 承認済みスコープの限界

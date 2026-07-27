@@ -9,7 +9,7 @@
 1. セッション開始時に `governance/supervisor.md` を読み込む。
 2. 指示を受けたら複雑度を判定する（`governance/workflow.md` のタスクサイズ基準）。
    - **Small（1〜3ステップ）：** サブエージェントを使わず直接実行してよい。
-   - **Medium以上：** 計画を `state/current-task.md` に書き、ステップごとに委任する。
+   - **Medium以上：** 計画を `state/tasks/T-NNN.md` に書き、ステップごとに委任する。
 3. サブエージェント（Agentツール）に委任するとき：
    - `subagent_type` で担当エージェントを選ぶ（`coder` / `researcher` / `verifier` / `doc-verifier`）。**モデルは各エージェントの frontmatter で決まるので、`model` パラメータは指定しない。**
    - エージェントの手順書は `.claude/agents/*.md` にあり、システムプロンプトとして自動で読み込まれる。プロンプトへの手動コピーは不要。
@@ -64,9 +64,17 @@ test_01/
 │   └── skills/         # メインコンテキストで動く手順書（必要時のみロード）
 │       ├── planning/SKILL.md      # opus   — 計画立案
 │       └── documentation/SKILL.md # sonnet — ドキュメント執筆
-├── governance/         # Supervisor・ワークフロー・検証・ルーティング
+├── .github/
+│   ├── workflows/      # ci.yml（必須チェック）、classify.yml（変更クラス判定）、ledger.yml（台帳生成）
+│   └── CODEOWNERS      # クラスCのパス＝人間のレビュー必須
+├── governance/         # Supervisor・ワークフロー・検証・ルーティング・変更クラス
 ├── memory/             # 長期知識（MEMORY.mdが索引、lessons.mdが教訓ログ）
-├── state/              # progress.md（進捗台帳＝集計の正本）、現在のタスク、チェックポイント、TODO
+├── scripts/            # ledger.py（台帳の検証と生成）、classify.py、validate_defs.py
+├── state/
+│   ├── tasks/          # T-NNN.md — 1タスク1ファイル。**進捗の正本**
+│   ├── progress.md     # 集計表。ledger.py が生成する派生物。手で編集しない
+│   ├── checkpoint.md
+│   └── todo.md
 └── README.md
 ```
 （`src/` 等の実装ディレクトリは実装開始時に追加する）
@@ -79,7 +87,7 @@ test_01/
 
 ## 作業プロトコル
 
-1. `state/progress.md`（進捗台帳）と `state/current-task.md` を読み、全体の進捗と進行中の作業を把握する。
+1. `state/progress.md`（進捗台帳＝全体の集計）を読み、次に `state/tasks/` の該当ファイルで進行中の作業の詳細を把握する。
 2. 計画立案は `/planning`、ドキュメント執筆は `/documentation` でスキルを呼ぶ（Claudeが文脈から自動で読み込むこともある）。
 3. `governance/workflow.md` のサイクルに従う：Planning → Execution → Review → Reflection。
 4. 重要な意思決定は `memory/decisions.md` にADR形式で書く。
@@ -89,16 +97,25 @@ test_01/
 
 ## 進捗管理
 
-**進捗の正本はリポジトリ内の `state/progress.md`（進捗台帳）。** タスクIDは `T-NNN` で、このファイルが採番元。外部サービスに依存しない。
+**進捗の正本は `state/tasks/T-NNN.md`（1タスク1ファイル）。** タスクIDはこのディレクトリが採番元で、外部サービスに依存しない。
+
+`state/progress.md` は `scripts/ledger.py` が全タスクファイルから生成する**集計表**。外部（別のAI CLI・スクリプト・人間）が現状を読む窓口はこちらだが、**書き込み先ではない。** 手で編集すると次の生成で上書きされる。
 
 ### 開発フロー
 
-1. 計画時に `state/progress.md` に行を追加し `T-NNN` を採番する（`/planning` スキルの手順に含まれる）。
+1. 計画時に `state/tasks/T-NNN.md` を新規作成する（`/planning` スキルの手順に含まれる）。既存タスクのファイルは触らない。
 2. 作業ブランチは `feature/T-NNN-<短い説明>` とする。
-3. レビュー可能になったら push し、`gh pr create` でPRを作る。PR本文に `T-NNN` を書いて台帳と対応付ける。
-4. マージ後、`state/progress.md` の Status を `done` にし、完了日とPR番号を記入する（`governance/workflow.md` の振り返りフェーズ）。
+3. レビュー可能になったら push し、`gh pr create` でPRを作る。PR本文に `T-NNN` を書く。
+4. PRの変更クラスを `.github/workflows/classify.yml` が判定する。クラスA/B は必須チェックが全green になり次第、自動マージされる。**クラスC は人間のレビュー承認を待つ。** クラスD は分割するまでブロックされる。
+5. マージ後、`ledger.yml` が `state/progress.md` を再生成する。
 
-進捗の集計は台帳ファイルだけで完結する。外部の進捗管理サービスとは同期していない。
+### 並列開発
+
+独立したタスクは並行して進めてよい。片方がレビュー待ちでも、もう片方の実装を止めない。
+
+- タスクファイルが別なので、ブランチ間でコンフリクトしない（これが1タスク1ファイルにしている理由）。
+- **依存のあるタスクを並列化しない。** 後続が先行の変更を含まないまま実装され、マージ後に破綻する。依存がある場合は先行ブランチから生やす（stacked PR）か、順番に実行する。
+- 依存の有無は計画時に判定する（`/planning` の「依存関係を特定する」）。
 
 ---
 

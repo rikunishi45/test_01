@@ -1,6 +1,6 @@
 ---
 name: planning
-description: ゴールを検証可能なステップに分解し、state/current-task.md に計画として書き出す。複数ステップを要する新しいタスクの開始時、要件変更やブロッカーによる計画の見直し時に使う。
+description: ゴールを検証可能なステップに分解し、state/tasks/ に計画として書き出す。複数ステップを要する新しいタスクの開始時、要件変更やブロッカーによる計画の見直し時に使う。
 model: opus
 ---
 
@@ -48,15 +48,28 @@ medium・largeタスクでは、自然なフェーズの区切りにチェック
 
 ## 6. 計画を書き出す
 
-まず `state/progress.md` に行を1つ追加し、`T-NNN` を採番する（Status は `planning`）。次に `state/current-task.md` に以下の形式で書く：
+`state/tasks/` の既存ファイルを見て次の連番を採り、`state/tasks/T-NNN.md` を**新規作成**する。
+既存ファイルは編集しない。1タスク1ファイルにしているのは、並列開発時に複数のブランチが
+同じ集計表の行を奪い合ってコンフリクトするのを避けるため（`governance/change-classes.md` 参照）。
+
+`state/progress.md` は `scripts/ledger.py` が生成する派生物なので**手で編集しない**。
+main へマージされた時点で自動的に再生成される。
+
+frontmatter の契約は `scripts/ledger.py validate` がCIで検査する。形式を外すとPRが赤くなる。
 
 ```markdown
-## Task: [ゴール]
+---
+id: T-NNN
+title: [ゴールを1行で]
+status: planning
+started: YYYY-MM-DD
+completed: "-"
+pr: "-"
+---
 
-**Status:** planning | in-progress | blocked | done
-**Complexity:** small | medium | large
-**Started:** YYYY-MM-DD
-**進捗台帳ID:** T-NNN（`state/progress.md` の行と対応）
+## ゴール
+
+[最終状態を2〜3文で]
 
 ### Steps
 
@@ -85,7 +98,9 @@ medium・largeタスクでは、自然なフェーズの区切りにチェック
 - [ ] 各フェーズがサインオフ／自走に分類されている
 - [ ] 計画が合意されたスコープに収まっている
 - [ ] largeタスクには中間チェックポイントが少なくとも1つある
-- [ ] `state/progress.md` に対応する行を追加し、IDを採番した
+- [ ] `state/tasks/T-NNN.md` を新規作成し、IDを採番した
+- [ ] `python3 scripts/ledger.py validate` が通る
+- [ ] 並列実行できるタスクと、先行タスクに依存するタスクを区別した（依存があるものは stacked PR にするか順番に実行する）
 
 ---
 

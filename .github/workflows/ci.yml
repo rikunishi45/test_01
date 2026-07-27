@@ -1,0 +1,65 @@
+name: CI
+
+# merge_group を入れておかないと、マージキュー内でチェックが走らず素通りする。
+# 必須チェックとして意味を持たせるために pull_request と両方で発火させる。
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ledger:
+    name: 進捗台帳の契約検証
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/ledger.py validate
+
+  definitions:
+    name: エージェント定義と参照の検証
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/validate_defs.py
+
+  yaml-syntax:
+    name: YAML構文
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 全YAMLをパースする
+        run: |
+          python3 - <<'PY'
+          import glob, sys, yaml
+          bad = []
+          for path in glob.glob(".github/**/*.y*ml", recursive=True):
+              try:
+                  yaml.safe_load(open(path, encoding="utf-8"))
+              except yaml.YAMLError as e:
+                  bad.append(f"{path}: {e}")
+          if bad:
+              print("YAML構文エラー:")
+              for b in bad:
+                  print(f"  - {b}")
+              sys.exit(1)
+          print("OK: すべてのYAMLがパースできる")
+          PY
+
+  secret-scan:
+    name: 秘密情報スキャン
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
