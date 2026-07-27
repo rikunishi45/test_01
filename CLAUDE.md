@@ -11,11 +11,20 @@
    - **Small（1〜3ステップ）：** サブエージェントを使わず直接実行してよい。
    - **Medium以上：** 計画を `state/current-task.md` に書き、ステップごとに委任する。
 3. サブエージェント（Agentツール）に委任するとき：
-   - モデルは `governance/routing.md` のルーティング表で選択する。
-   - 該当する `skills/*.md` の内容をプロンプトに埋め込んで渡す（サブエージェントはスキルファイルを自動では読まない）。
-   - ゴール・制約・受け入れ基準・出力形式を明示する。
+   - `subagent_type` で担当エージェントを選ぶ（`coder` / `researcher` / `verifier` / `doc-verifier`）。**モデルは各エージェントの frontmatter で決まるので、`model` パラメータは指定しない。**
+   - エージェントの手順書は `.claude/agents/*.md` にあり、システムプロンプトとして自動で読み込まれる。プロンプトへの手動コピーは不要。
+   - 渡すのは、ゴール・制約・受け入れ基準・出力形式・対象ファイルパス。
 4. 検証は `governance/verification.md` の発動条件に従い、Executor/Verifierを分離する。
 5. 停止・確認・エスカレーションは `governance/supervisor.md` のルールに従う。**それに該当しない限り、承認済み計画の範囲内は自律的に実行する。**
+
+### モデル方針（詳細は `governance/routing.md`）
+
+| 役割 | モデル |
+|------|--------|
+| Supervisor（このセッション） | Opus 5（`/model opus`） |
+| 実装・リサーチ・検証・ドキュメント | Sonnet 5 |
+| 単純検索・定型ルーブリック採点 | Haiku 4.5 |
+| Fable 5 | 従量課金のため既定では使わない |
 
 ---
 
@@ -46,21 +55,33 @@
 ```
 test_01/
 ├── .github/workflows/  # notion-sync.yml（PR→Notion 進捗同期）
-├── .claude/            # settings.json（許可リスト）
+├── .claude/
+│   ├── settings.json   # 許可リスト
+│   ├── agents/         # サブエージェント定義（独立コンテキスト＋モデル固定＋ツール制限）
+│   │   ├── coder.md        # sonnet — 実装
+│   │   ├── researcher.md   # sonnet — リサーチ
+│   │   ├── verifier.md     # sonnet — コード/計画/リサーチの検証
+│   │   └── doc-verifier.md # haiku  — ドキュメントの定型採点
+│   └── skills/         # メインコンテキストで動く手順書（必要時のみロード）
+│       ├── planning/SKILL.md      # opus   — 計画立案
+│       └── documentation/SKILL.md # sonnet — ドキュメント執筆
 ├── governance/         # Supervisor・ワークフロー・検証・ルーティング
-├── skills/             # タスク種別ごとの指示書
 ├── memory/             # 長期知識（MEMORY.mdが索引、lessons.mdが教訓ログ）
 ├── state/              # 現在のタスク、チェックポイント、TODO
 └── README.md
 ```
 （`src/` 等の実装ディレクトリは実装開始時に追加する）
 
+**`.claude/agents/` と `.claude/skills/` の使い分け：**
+- **agents** — 別コンテキストで走る実行役。探索ログや大量のファイル内容でメインの文脈を汚さない。ツールとモデルを宣言的に固定できる。
+- **skills** — メインコンテキストで動く手順書。会話の文脈をそのまま使う作業（計画立案、文書執筆）向け。本文は呼ばれたときだけロードされる。
+
 ---
 
 ## 作業プロトコル
 
 1. `state/current-task.md` を読み、進行中の作業を把握する。
-2. タスク種別の開始前に該当する `skills/*.md` を読み込む。
+2. 計画立案は `/planning`、ドキュメント執筆は `/documentation` でスキルを呼ぶ（Claudeが文脈から自動で読み込むこともある）。
 3. `governance/workflow.md` のサイクルに従う：Planning → Execution → Review → Reflection。
 4. 重要な意思決定は `memory/decisions.md` にADR形式で書く。
 5. `state/` ファイルを最新に保つ — 各セッションの開始時と終了時に更新する。
