@@ -27,8 +27,9 @@ Planning（計画）→ Execution（実行）→ Review（レビュー）→ Ref
 3. 依存関係とクリティカルパスを特定する。
 4. 複雑度を見積もる：small（1〜3ステップ）、medium（4〜8）、large（9以上）。
 5. largeタスクには、ユーザーが進捗をレビューできる明示的なチェックポイントを設ける。
+6. **`state/progress.md` に行を1つ追加する**（`T-NNN` を採番し、Status を `planning` にする）。以降このIDでタスクを追跡する。
 
-**成果物：** 計画を反映した `state/current-task.md`。
+**成果物：** 計画を反映した `state/current-task.md` と、`state/progress.md` の新規行。
 
 **終了ゲート：** 計画が書き出され、ユーザー承認（largeタスク）または自己承認（small/mediumタスク）を得ている。
 
@@ -42,7 +43,7 @@ Planning（計画）→ Execution（実行）→ Review（レビュー）→ Ref
 1. 依存関係を守りながら、ステップを順番に進める。
 2. 各ステップの開始前に、担当を確認する。サブエージェントに委任する場合、手順書は `.claude/agents/*.md` からシステムプロンプトとして自動で読み込まれる。
 3. 各ステップの完了後、受け入れ基準に対してセルフチェックする。
-4. 完了したステップを `state/current-task.md` に反映する。
+4. 完了したステップを `state/current-task.md` に反映する。実行に入った時点で `state/progress.md` の Status を `in-progress` にする（ブロックされたら `blocked` にしてNotesにブロッカーを書く）。
 5. ブロッカーに遭遇したら先に進まず、表面化させる。
 
 **レビューゲート発動条件（実行を一時停止してレビューする）：**
@@ -84,24 +85,26 @@ Planning（計画）→ Execution（実行）→ Review（レビュー）→ Ref
 3. 同じタグの教訓が2回以上溜まっていたら、該当するエージェント定義またはスキルへの反映案を作成してユーザーに提示する（承認後に更新）。
 4. `model` パラメータでモデルを上書きした場合は、その判断が適切だったかを確認し、`governance/routing.md` の見直し材料にする。
 5. フォローアップ項目を `state/todo.md` に記録する。
-6. 完了した項目を `state/current-task.md` から整理する。
+6. **`state/progress.md` の該当行を更新する** — Status を `done`、完了日、PR番号を記入し、末尾の集計表と最終更新日も直す。
+7. 完了した項目を `state/current-task.md` から整理する（履歴は `state/progress.md` に残るため消してよい）。
 
-**成果物：** 更新された `memory/` と `state/` ファイル。
+**成果物：** 更新された `memory/` と `state/` ファイル。`state/progress.md` が最新であること — このファイルが外部から進捗を読む唯一の窓口。
 
 ---
 
-## 対外ゲート：PR駆動のNotion同期
+## 対外ゲート：push と PR
 
-ローカルのループ（Planning→Execution→Review→Reflection）の完了を、対外的な進捗に接続する。
+ローカルのループ（Planning→Execution→Review→Reflection）の完了を、リポジトリ上の可視な状態に接続する。
 
-- コード成果物がレビュー可能な状態（検証PASS）になったら、`feature/TASK-n-...` ブランチを push し、
-  `gh pr create --body "Closes TASK-n"` でPRを作成する。→ Notionが自動で **In Review**。
-- PRがマージされたら Notionが自動で **Done**（`.github/workflows/notion-sync.yml`）。
-- 詳細な規約は `CLAUDE.md` の「プロジェクト固有ルール — PR駆動のNotion進捗同期」を参照。
+- コード成果物がレビュー可能な状態（検証PASS）になったら、`feature/T-NNN-...` ブランチを push し、
+  `gh pr create` でPRを作成する。PR本文に `T-NNN` を書いて `state/progress.md` と対応付ける。
+- PR作成時に `state/progress.md` の Status を `review` に、マージ後に `done` にする。
+- Notion同期を併用する場合の条件と注意点は `CLAUDE.md` の「進捗管理 → 補助：Notion同期」を参照。
 
 このゲートは検証ループ（成果物の品質）とは独立した「対外可視化」の仕組みであり、
-検証PASS後のReflectionと並行して行う。PR作成・マージは対外操作だが、最終ゲートで
-**承認済みスコープ**に含めておけば、自走フェーズ中は都度停止せずに実行できる。
+検証PASS後のReflectionと並行して行う。**push と PR作成は不可逆な対外操作**なので、
+最終ゲートで **承認済みスコープ** に含めておかない限り、実行前にユーザーの確認を取る。
+承認済みスコープに含まれていれば、自走フェーズ中は都度停止せずに実行できる。
 
 ---
 

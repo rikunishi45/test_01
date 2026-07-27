@@ -48,7 +48,7 @@ medium・largeタスクでは、自然なフェーズの区切りにチェック
 
 ## 6. 計画を書き出す
 
-`state/current-task.md` に以下の形式で書く：
+まず `state/progress.md` に行を1つ追加し、`T-NNN` を採番する（Status は `planning`）。次に `state/current-task.md` に以下の形式で書く：
 
 ```markdown
 ## Task: [ゴール]
@@ -56,7 +56,7 @@ medium・largeタスクでは、自然なフェーズの区切りにチェック
 **Status:** planning | in-progress | blocked | done
 **Complexity:** small | medium | large
 **Started:** YYYY-MM-DD
-**Notion Ticket:** TASK-n（あれば）
+**進捗台帳ID:** T-NNN（`state/progress.md` の行と対応）
 
 ### Steps
 
@@ -85,6 +85,7 @@ medium・largeタスクでは、自然なフェーズの区切りにチェック
 - [ ] 各フェーズがサインオフ／自走に分類されている
 - [ ] 計画が合意されたスコープに収まっている
 - [ ] largeタスクには中間チェックポイントが少なくとも1つある
+- [ ] `state/progress.md` に対応する行を追加し、IDを採番した
 
 ---
 

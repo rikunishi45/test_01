@@ -67,7 +67,7 @@ test_01/
 │       └── documentation/SKILL.md # sonnet — ドキュメント執筆
 ├── governance/         # Supervisor・ワークフロー・検証・ルーティング
 ├── memory/             # 長期知識（MEMORY.mdが索引、lessons.mdが教訓ログ）
-├── state/              # 現在のタスク、チェックポイント、TODO
+├── state/              # progress.md（進捗台帳＝集計の正本）、現在のタスク、チェックポイント、TODO
 └── README.md
 ```
 （`src/` 等の実装ディレクトリは実装開始時に追加する）
@@ -80,26 +80,32 @@ test_01/
 
 ## 作業プロトコル
 
-1. `state/current-task.md` を読み、進行中の作業を把握する。
+1. `state/progress.md`（進捗台帳）と `state/current-task.md` を読み、全体の進捗と進行中の作業を把握する。
 2. 計画立案は `/planning`、ドキュメント執筆は `/documentation` でスキルを呼ぶ（Claudeが文脈から自動で読み込むこともある）。
 3. `governance/workflow.md` のサイクルに従う：Planning → Execution → Review → Reflection。
 4. 重要な意思決定は `memory/decisions.md` にADR形式で書く。
-5. `state/` ファイルを最新に保つ — 各セッションの開始時と終了時に更新する。
+5. `state/` ファイルを最新に保つ — 各セッションの開始時と終了時に更新する。**`state/progress.md` は外部（別のAI CLI・スクリプト・人間）が進捗を読む唯一の窓口なので、Status語彙と日付形式の規約を崩さない。**
 
 ---
 
-## プロジェクト固有ルール — PR駆動のNotion進捗同期
+## 進捗管理
 
-このプロジェクトの進捗は Notion「開発進捗 (Dev Progress)」DB と自動同期する。
+**進捗の正本はリポジトリ内の `state/progress.md`（進捗台帳）。** タスクIDは `T-NNN` で、このファイルが採番元。外部サービスに依存しない。
 
-1. タスクは Notion の「開発進捗」DB に作成する（Ticket ID `TASK-n` が自動採番される）。
-2. 作業ブランチは `feature/TASK-n-<短い説明>` とする。
-3. レビュー可能になったら push し、`gh pr create --body "Closes TASK-n"` でPRを作る。
-   - PR本文またはタイトルに **`Closes TASK-n` を必ず含める**（同期の突合キー）。
-4. 自動遷移：**PR作成 → Notion In Review**、**マージ → Done**（`.github/workflows/notion-sync.yml`）。
-5. `In Progress` は着手時に手動またはNotion MCPで設定する（PRイベントでは拾えないため自動化対象外）。
+### 開発フロー
 
-これにより、ローカルのループ（Planning→Execution→Review→Reflection）の完了が、そのまま対外的な進捗（In Review→Done）に接続される。
+1. 計画時に `state/progress.md` に行を追加し `T-NNN` を採番する（`/planning` スキルの手順に含まれる）。
+2. 作業ブランチは `feature/T-NNN-<短い説明>` とする。
+3. レビュー可能になったら push し、`gh pr create` でPRを作る。PR本文に `T-NNN` を書いて台帳と対応付ける。
+4. マージ後、`state/progress.md` の Status を `done` にし、完了日とPR番号を記入する（`governance/workflow.md` の振り返りフェーズ）。
+
+### 補助：Notion同期（任意）
+
+`.github/workflows/notion-sync.yml` が、PRのタイトル／本文に `TASK-<n>` があれば Notion「開発進捗」DB のStatusを更新する（PR作成→In Review、マージ→Done）。
+
+- **`TASK-<n>` を書かなければスキップされ、ワークフローは正常終了する。** Notionを使わない場合は何も書かなくてよい。
+- **注意：`TASK-<n>` を書いたのに対応するNotionページが無いと、ワークフローは exit 1 で失敗する（PRに赤いバツが付く）。** Notion側にページを作ってある場合のみ書くこと。
+- 参照しているのはPRのタイトルと本文だけで、ブランチ名は見ていない。
 
 ---
 
