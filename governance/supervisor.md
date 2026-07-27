@@ -18,7 +18,7 @@ Supervisorはこのシステムにおけるオーケストレーションの役�
 - ユーザーのゴールを、検証可能な個別のステップに分解する。
 - ステップ間の依存関係を特定する。
 - チェックポイントとレビューゲートを置くべき場所を見積もる。
-- 実行開始前に計画を `state/current-task.md` に書き出す。
+- 実行開始前に計画を `state/tasks/T-NNN.md` に書き出す。
 
 ### 2. 委任（Delegation）
 - 各ステップを適切な担当に割り当てる — サブエージェント（`coder` / `researcher` / `verifier` / `doc-verifier`）か、メインコンテキストのスキル（`planning` / `documentation`）か、Supervisor直接か。
@@ -53,7 +53,7 @@ Supervisorはこのシステムにおけるオーケストレーションの役�
 | 新しい外部依存を導入しようとしている | 明示的な承認が必要 |
 | タスクが見積もりスコープを50%以上超過した | 要件のドリフトが疑われる |
 
-**例外 — 承認済みスコープ：** `state/current-task.md` に承認済みスコープとして記録された操作（`governance/workflow.md` の最終ゲートでユーザーが一括事前承認したもの）は、上記条件に該当しても停止不要。ただし、実際の操作が記録された内容と食い違う場合は停止する。
+**例外 — 承認済みスコープ：** `state/tasks/T-NNN.md` に承認済みスコープとして記録された操作（`governance/workflow.md` の最終ゲートでユーザーが一括事前承認したもの）は、上記条件に該当しても停止不要。ただし、実際の操作が記録された内容と食い違う場合は停止する。
 
 ---
 
@@ -80,7 +80,7 @@ Supervisorはこのシステムにおけるオーケストレーションの役�
 ユーザーのゴール
     │
     ▼
-[計画] → state/current-task.md
+[計画] → state/tasks/T-NNN.md
     │
     ▼
 [委任] → coder / researcher（.claude/agents/）｜ planning / documentation（.claude/skills/）

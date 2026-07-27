@@ -1,0 +1,96 @@
+name: Classify
+
+# 変更クラス（A/B/C/D）を差分のパスから判定し、自動マージの可否を決める。
+# クラスC は「失敗」にしない — 人間がマージできなくなってしまうため。
+# 自動マージを有効化しないことで、人間が来るまでPRを待たせるのが正しい挙動。
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: classify-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  classify:
+    name: 変更クラス判定
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 変更ファイルを取得する
+        id: files
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git diff --name-only "$BASE" "$HEAD" > changed.txt
+          echo "変更ファイル:"; cat changed.txt
+
+      - name: クラスを判定する
+        id: classify
+        run: |
+          set +e
+          xargs -a changed.txt python3 scripts/classify.py | tee result.txt
+          echo "code=${PIPESTATUS[1]}" >> "$GITHUB_OUTPUT"
+
+      - name: ラベルを付ける
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          CLASS: ${{ steps.classify.outputs.class }}
+        run: |
+          for c in A B C D; do
+            gh pr edit "$PR" --remove-label "class-$c" 2>/dev/null || true
+          done
+          gh label create "class-$CLASS" --color ededed --force >/dev/null 2>&1 || true
+          gh pr edit "$PR" --add-label "class-$CLASS"
+
+      - name: クラスD はブロックする
+        if: steps.classify.outputs.code == '2'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr comment "$PR" --body "$(cat <<'EOF'
+          ## クラスD — 分割が必要
+
+          このPRはクラスC（ガードレール・実行可能コード）の変更と、
+          それ以外の低リスクな変更を混在させている。
+
+          レビューが必要な変更が低リスクな変更に紛れて通ってしまうため、
+          別々のPRに分割すること。
+
+          <details><summary>判定の詳細</summary>
+
+          ```
+          $(cat result.txt)
+          ```
+          </details>
+          EOF
+          )"
+          echo "::error::クラスD — クラスCの変更を別PRに分割すること"
+          exit 1
+
+      - name: クラスA/B は自動マージを有効化する
+        if: steps.classify.outputs.automergeable == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr merge "$PR" --auto --squash
+          echo "自動マージを有効化した。必須チェックが全green になった時点でマージされる。"
+
+      - name: クラスC は人間のレビューを待つ
+        if: steps.classify.outputs.class == 'C'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          echo "::notice::クラスC — CODEOWNERS のレビュー承認が必要。自動マージは有効化しない。"

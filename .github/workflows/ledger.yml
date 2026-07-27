@@ -1,0 +1,60 @@
+name: Ledger
+
+# state/progress.md を state/tasks/*.md から再生成する。
+#
+# なぜ main 側で生成するのか: 並列開発では複数のfeatureブランチが同時に走る。
+# 各ブランチが progress.md の同じ表に行を足すと、マージのたびにコンフリクトし、
+# 自動マージが止まる。タスクの正本を1タスク1ファイルにして、集計表は main 上で
+# 生成することで、ブランチ同士が同じ行を奪い合う状況そのものを無くす。
+#
+# main への直接pushはボットにも許さない。自分で決めたルールの例外を作らないため、
+# 生成結果はPR経由で入れる（state/** はクラスA なので自動マージされる）。
+on:
+  push:
+    branches: [main]
+    paths:
+      - "state/tasks/**"
+      - "scripts/ledger.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ledger
+  cancel-in-progress: false
+
+jobs:
+  regenerate:
+    name: 進捗台帳を再生成する
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 再生成して差分を確認する
+        id: render
+        run: |
+          python3 scripts/ledger.py render
+          if git diff --quiet -- state/progress.md; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "進捗台帳は既に最新。"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: PRを作成する
+        if: steps.render.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="chore/ledger-$(date +%Y%m%d-%H%M%S)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add state/progress.md
+          git commit -m "chore: 進捗台帳を state/tasks/ から再生成"
+          git push -u origin "$BRANCH"
+          gh pr create \
+            --title "chore: 進捗台帳を再生成" \
+            --body "\`state/tasks/*.md\` の変更を \`state/progress.md\` に反映する自動生成PR。クラスA のため自動マージされる。"

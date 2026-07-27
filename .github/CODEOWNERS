@@ -1,0 +1,18 @@
+# クラスC のパス — 人間のレビュー承認を必須にする。
+#
+# ルールセットで required_approving_review_count: 0 かつ require_code_owner_review: true
+# にすると、承認要求がパス単位で効く。クラスA/B のPRは承認なしで自動マージでき、
+# ここに列挙したパスに触れたPRだけがレビューで止まる。
+#
+# scripts/classify.py の RULES と対応させること。片方だけ変えると穴が開く。
+
+# ガードレール自体。ここを自動マージ可にすると、エージェントが自分の制約を
+# 緩めるPRを無人でマージできてしまう。
+/.github/          @rikunishi45
+/.claude/          @rikunishi45
+/governance/       @rikunishi45
+/CLAUDE.md         @rikunishi45
+
+# 実行可能コード
+/scripts/          @rikunishi45
+/src/              @rikunishi45
