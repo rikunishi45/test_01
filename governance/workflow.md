@@ -99,7 +99,6 @@ Planning（計画）→ Execution（実行）→ Review（レビュー）→ Ref
 - コード成果物がレビュー可能な状態（検証PASS）になったら、`feature/T-NNN-...` ブランチを push し、
   `gh pr create` でPRを作成する。PR本文に `T-NNN` を書いて `state/progress.md` と対応付ける。
 - PR作成時に `state/progress.md` の Status を `review` に、マージ後に `done` にする。
-- Notion同期を併用する場合の条件と注意点は `CLAUDE.md` の「進捗管理 → 補助：Notion同期」を参照。
 
 このゲートは検証ループ（成果物の品質）とは独立した「対外可視化」の仕組みであり、
 検証PASS後のReflectionと並行して行う。**push と PR作成は不可逆な対外操作**なので、

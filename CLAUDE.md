@@ -31,7 +31,7 @@
 ## プロジェクト概要
 
 **名前：** test_01
-**目的：** PR駆動のNotion進捗同期と、`project_a` 由来のループエンジニアリング（Supervisor＋Planning/Execution/Review/Reflection＋検証ループ）を、実プロジェクト上で運用・検証するためのリポジトリ。
+**目的：** `project_a` 由来のループエンジニアリング（Supervisor＋Planning/Execution/Review/Reflection＋検証ループ）を、実プロジェクト上で運用・検証するためのリポジトリ。
 **Status:** active
 **作成日：** 2026-07-24
 
@@ -54,7 +54,6 @@
 
 ```
 test_01/
-├── .github/workflows/  # notion-sync.yml（PR→Notion 進捗同期）
 ├── .claude/
 │   ├── settings.json   # 許可リスト
 │   ├── agents/         # サブエージェント定義（独立コンテキスト＋モデル固定＋ツール制限）
@@ -99,13 +98,7 @@ test_01/
 3. レビュー可能になったら push し、`gh pr create` でPRを作る。PR本文に `T-NNN` を書いて台帳と対応付ける。
 4. マージ後、`state/progress.md` の Status を `done` にし、完了日とPR番号を記入する（`governance/workflow.md` の振り返りフェーズ）。
 
-### 補助：Notion同期（任意）
-
-`.github/workflows/notion-sync.yml` が、PRのタイトル／本文に `TASK-<n>` があれば Notion「開発進捗」DB のStatusを更新する（PR作成→In Review、マージ→Done）。
-
-- **`TASK-<n>` を書かなければスキップされ、ワークフローは正常終了する。** Notionを使わない場合は何も書かなくてよい。
-- **注意：`TASK-<n>` を書いたのに対応するNotionページが無いと、ワークフローは exit 1 で失敗する（PRに赤いバツが付く）。** Notion側にページを作ってある場合のみ書くこと。
-- 参照しているのはPRのタイトルと本文だけで、ブランチ名は見ていない。
+進捗の集計は台帳ファイルだけで完結する。外部の進捗管理サービスとは同期していない。
 
 ---
 
@@ -113,13 +106,10 @@ test_01/
 
 | サービス | 目的 | 認証 |
 |---------|------|------|
-| Notion API | PR駆動での進捗ステータス更新 | GitHub Secrets: `NOTION_TOKEN`（内部インテグレーション）／`NOTION_DATABASE_ID` |
-| GitHub Actions | notion-sync.yml の実行基盤 | リポジトリ標準 |
+| GitHub | リモートリポジトリ、PR | `gh` CLI |
 
 ---
 
 ## 既知の制約・落とし穴
 
-- `In Progress` はPRイベントで拾えないため自動化対象外（手動設定）。
-- Notion の Ticket ID は Project/Task 共通の連番で採番される（Task IDは連続しないことがある）。
-- `NOTION_TOKEN` はGitHub Secretsのみに保持し、コードやログに出さない。
+- 進捗の集計は手動更新に依存する。更新漏れを防ぐため、更新タイミングを `governance/workflow.md` の各フェーズ手順に埋め込んである。
