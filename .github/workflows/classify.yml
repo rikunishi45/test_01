@@ -36,9 +36,15 @@ jobs:
       - name: クラスを判定する
         id: classify
         run: |
+          # パイプも xargs も挟まない。パイプだと $? が末尾コマンドのものになり、
+          # xargs は子プロセスの終了コードを 123 に潰すため、どちらも判定結果を握り潰す。
+          mapfile -t FILES < changed.txt
           set +e
-          xargs -a changed.txt python3 scripts/classify.py | tee result.txt
-          echo "code=${PIPESTATUS[1]}" >> "$GITHUB_OUTPUT"
+          python3 scripts/classify.py "${FILES[@]}" > result.txt 2>&1
+          code=$?
+          set -e
+          cat result.txt
+          echo "code=$code" >> "$GITHUB_OUTPUT"
 
       - name: ラベルを付ける
         env:
