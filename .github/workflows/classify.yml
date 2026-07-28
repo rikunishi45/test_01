@@ -30,7 +30,12 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
-          git diff --name-only "$BASE" "$HEAD" > changed.txt
+          # three-dot（マージベースからの差分）で取る。two-dot にすると、PRの作成後に
+          # ベースブランチが進んだ場合、そのPRが触っていないファイルまで差分に現れる。
+          # 実測（PR #9）: settings.json のみのPRが、先にマージされた別PRの
+          # state/tasks/T-004.md を巻き込んでクラスD判定になり、分割不可能な要求で
+          # ブロックされた。並列開発では常時発生する。
+          git diff --name-only "$BASE...$HEAD" > changed.txt
           echo "変更ファイル:"; cat changed.txt
 
       - name: クラスを判定する
