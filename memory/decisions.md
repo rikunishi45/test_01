@@ -68,4 +68,43 @@ GET /repos/rikunishi45/test_01/rulesets
 
 ---
 
+## ADR-003: main の保護をルールセット2本に分割し、クラスCは管理者bypassでマージする
+
+**Date:** 2026-07-28
+**Status:** accepted
+
+### Context（背景）
+
+T-004 Step 6 でルールセットを適用するにあたり、2つの制約が判明した。
+
+**1つ目：コードオーナーは自分のPRを承認できない。** CODEOWNERS の唯一のオーナーは `@rikunishi45` で、PRの作成者も `rikunishi45`。GitHub は自己承認を許可しないため、`require_code_owner_review: true` を素直に適用すると**クラスCのPRが永久にマージ不能**になる。クラスCは `.github/` `.claude/` `governance/` `scripts/` `CLAUDE.md` ＝ 本リポジトリの保守作業のほぼ全域で、T-004 の残ステップ自身もクラスCに当たる。
+
+**2つ目：個人リポジトリでは人間とエージェントが同一のGitHubアイデンティティを共有する。** サーバー側のルールは両者を区別できない。`governance/change-classes.md` が「サーバー側の壁」に期待していた対エージェント防御は、この構成では原理的に成立しない。
+
+なお、当初の懸念だった「`required_approving_review_count: 0` と `require_code_owner_review: true` を同時に設定できるか」は**問題なし**。両者は独立したフィールドで、承認数0でもコードオーナー承認は別枠で強制される。
+
+### Decision（決定）
+
+ルールセットを2本に分け、bypass を片方だけに限定する。
+
+- `main-ci` — 必須ステータスチェック5件、force-push禁止、ブランチ削除禁止。**bypass なし**
+- `main-review` — PR必須、コードオーナー承認必須。bypass は Repository admin、モードは `pull_request`（PRのマージ時のみ）
+
+これにより、クラスA/B は承認者0人で auto-merge され、クラスCは管理者が内容を確認したうえで手動マージでき、CIが赤ければ管理者でもマージできず、mainへの直接pushは誰にも許されない。
+
+bypass をルールセット単位でしか設定できないため、1本にまとめると管理者bypassが必須チェックまで飛ばしてしまう。分割はそれを避けるためのもの。
+
+### Consequences（帰結）
+
+- クラスCに対する対エージェント防御は、Step 7（`.claude/settings.json` の `deny`）と Step 8（PreToolUse フック）の**ローカル層のみ**になる。`governance/change-classes.md` の多層表のうち「CODEOWNERS ＋ ルールセット」の行は、対人間には効くが対エージェントには効かない。Step 9 でこの記述を実態に合わせる
+- 「別ルールセットの bypass が他方のルールを免除しないこと」は公式ドキュメントに明記がなく、Step 11 で実測する必要がある。この前提が崩れると管理者がCI赤のままマージできてしまう
+- クラスDのブロックが有効になったため、今後のPRはクラスをまたいで混ぜられない。`state/` の更新と `.claude/` の変更は別PRにする必要がある
+
+### Alternatives Considered（検討した代替案）
+
+- **GitHub App でエージェントに別アイデンティティを与える** — PR作成者が `xxx[bot]` になり `rikunishi45` がコードオーナーとして承認できるため、bypass 不要でサーバー側の壁が本物になる。当初の設計意図に最も忠実だが、App作成・インストール・秘密鍵の管理が必要でT-004のスコープ外。**後続タスクとして `state/todo.md` に起票**した
+- **ルールセット1本＋管理者bypass** — 設定は最も簡単だが、bypassがルールセット単位で効くため必須チェックまで飛ばす。クラスCをCI赤のままマージできてしまうため却下
+
+---
+
 <!-- 新しいADRはこの行の上に、番号をインクリメントして追加する -->
