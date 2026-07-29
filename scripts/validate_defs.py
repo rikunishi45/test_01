@@ -6,6 +6,7 @@ frontmatter が壊れるとモデルルーティングが例外を出さずに�
 """
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -96,8 +97,33 @@ RE_INLINE_PATH = re.compile(r"`([A-Za-z0-9_.\-/]+\.(?:md|py|json|yml|yaml))`")
 RE_PLACEHOLDER = re.compile(r"NNN|[*{}<>]")
 
 
+def gitignored(targets):
+    """gitignore 対象のパスの集合を返す。判定できなければ空集合を返す。
+
+    gitignore されたファイルは意図的にリポジトリに存在しないため、参照が
+    解決できないのは正常。これを除外しないと、ローカルには在るがCIの
+    チェックアウトには無いファイル（`.claude/settings.local.json` など）への
+    言及が、ローカルで通ってCIでだけ落ちる（実測: PR #11）。
+    """
+    if not targets:
+        return set()
+    try:
+        r = subprocess.run(
+            ["git", "check-ignore", "--stdin"],
+            input="\n".join(targets),
+            capture_output=True,
+            text=True,
+            cwd=ROOT,
+            timeout=10,
+        )
+    except Exception:
+        # git が無い・タイムアウト等。除外なしで従来どおり検証する。
+        return set()
+    return {line.strip() for line in r.stdout.splitlines() if line.strip()}
+
+
 def check_references():
-    errors = []
+    unresolved = []
     for path in sorted(ROOT.rglob("*.md")):
         if ".git/" in str(path) or "/worktrees/" in str(path):
             continue
@@ -112,8 +138,15 @@ def check_references():
             # リポジトリルート相対、または参照元ファイルからの相対で解決できればよい
             if (ROOT / target).exists() or (path.parent / target).exists():
                 continue
-            errors.append(f"{rel}: 存在しないファイルを参照している: `{target}`")
-    return errors
+            unresolved.append((rel, target))
+
+    # 解決できなかったものだけを gitignore 判定にかける（git 呼び出しは1回）
+    ignored = gitignored([target for _, target in unresolved])
+    return [
+        f"{rel}: 存在しないファイルを参照している: `{target}`"
+        for rel, target in unresolved
+        if target not in ignored
+    ]
 
 
 if __name__ == "__main__":
