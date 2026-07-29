@@ -22,12 +22,36 @@
       "Bash(git commit *)",
       "Bash(git push *)",
       "Bash(gh pr create)",
-      "Bash(gh pr create *)"
+      "Bash(gh pr create *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr list *)",
+      "Bash(gh pr diff *)",
+      "Bash(gh pr checks *)",
+      "Bash(gh run list *)",
+      "Bash(gh run view *)",
+
+      "Bash(git fetch *)",
+      "Bash(git switch *)",
+      "Bash(git checkout *)",
+      "Bash(git pull *)",
+
+      "Bash(python3 scripts/*)",
+
+      "Agent(coder)",
+      "Agent(researcher)",
+      "Agent(verifier)",
+      "Agent(doc-verifier)"
     ],
     "ask": [
       "Bash(rm *)",
       "Bash(git reset *)",
-      "Bash(git rebase *)"
+      "Bash(git rebase *)",
+
+      "Edit(/.claude/**)",
+      "Edit(/.github/**)",
+      "Edit(/governance/**)",
+      "Edit(/scripts/**)",
+      "Edit(/CLAUDE.md)"
     ],
     "deny": [
       "Bash(git push --force)",
@@ -66,7 +90,10 @@
       "Bash(git commit --amend *)",
       "Bash(git commit * --amend)",
       "Bash(git commit * --amend *)",
-      "Bash(git filter-branch *)"
+      "Bash(git filter-branch *)",
+
+      "Bash(gh api *)",
+      "Bash(curl *)"
     ]
   },
   "hooks": {
