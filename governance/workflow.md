@@ -107,6 +107,50 @@ Planning（計画）→ Execution（実行）→ Review（レビュー）→ Ref
 
 ---
 
+## ロールバック：マージ済みの変更を戻す
+
+事後監視で「誤った方向に進んでいる」と判断したときの巻き戻し手順。main への直接pushとforce-pushは禁止されている（`main-ci` ルールセットの `non_fast_forward`、`.claude/settings.json` の deny、PreToolUse フックの3層）ため、**revert も通常のPRとして通す。**
+
+### 手順
+
+```bash
+git switch -c revert-<PR番号> main
+git revert <SHA>              # マージコミットなら git revert -m 1 <SHA>
+gh pr create --fill           # 本文に戻す対象のPR番号と T-NNN を追記する
+```
+
+`<SHA>` は `git log --oneline main` で特定する。`--fill` はコミットメッセージを本文にするだけなので、上記の対応付け（「対外ゲート：push と PR」参照）は手で補う。
+
+ブランチ名が `feature/T-NNN-...` 規約と異なるのは意図的で、ロールバックが特定タスクの作業ではなく異常時の介入だからである。
+
+### squash と merge commit を取り違えない
+
+このリポジトリには両方が存在する。`git rev-list --parents -n1 <SHA>` の出力語数で判別できる（2語＝通常コミット、3語＝マージコミット）。
+
+| マージ経路 | 履歴上の形 | revert コマンド |
+|---|---|---|
+| `classify.yml` の auto-merge（クラスA/B） | squash された通常コミット | `git revert <SHA>` |
+| 人間が GitHub UI でマージ（クラスC） | マージコミット（親2つ） | `git revert -m 1 <SHA>` |
+
+`-m 1` は「1番目の親（main側）を残す」指定。マージコミットに `-m` を付けずに revert しようとすると git が拒否して停止するため、取り違えても静かに壊れることはない。
+
+### revert PR も同じ壁を通る
+
+**revert の差分は元の変更の逆なので、変更クラスは元と同じになる。** 元がクラスCなら revert PR も人間のマージ承認が必要で、必須チェック5件も通さなければならない（`main-ci` に bypass actor は無い）。
+
+急いで戻したい場合もCIが緑になるまでマージできない。**この制約は意図的**で、「壊れた変更を戻すつもりで、さらに壊れたものをマージする」ことを防いでいる。
+
+### git では戻せないもの
+
+| 対象 | 理由 | 戻す方法 |
+|---|---|---|
+| リポジトリ設定・ルールセット | git の履歴に存在しない | `memory/decisions.md` の ADR に記録された変更前の状態から手で戻す |
+| マージ済みPRのブランチ | `delete_branch_on_merge: true` で削除済み | revert は main 上のSHAだけで済むのでブランチは不要 |
+
+したがって、**設定変更を伴う作業では ADR に変更前の値を書いておくことがロールバックの前提条件**になる。
+
+---
+
 ## チェックポイントプロトコル
 
 チェックポイント付きのタスクでは、`state/tasks/T-NNN.md` に以下の形式を使う：
